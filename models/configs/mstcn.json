@@ -1,0 +1,12 @@
+{
+    "dropout": 0.2,
+    "dwpw": false,
+    "kernel_size": [
+        3,
+        5,
+        7
+    ],
+    "num_layers": 4,
+    "width_mult": 1,
+    "hidden_dim": 256
+}
