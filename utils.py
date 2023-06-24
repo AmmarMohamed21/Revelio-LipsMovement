@@ -1,7 +1,6 @@
 import numpy as np
 
-def getMeanAndStd(realData, deepfakesData, face2faceData, faceswapData, neuraltexturesData): 
-    
+def getMeanAndStd(realData, deepfakesData, face2faceData, faceswapData, neuraltexturesData):  
     realmean = realData.mean()
     realSize = realData.shape[0]
 
