@@ -196,11 +196,3 @@ class Preprocessor:
         np.savez_compressed(outputName, dataset=dataset)
 
     
-def cropAndNormalize(data, targetShape=(88,88), mean=127.231, std=42.438):
-    normalizedData = (data - mean) / std
-    L, S, W, H = normalizedData.shape
-    x_start = (W - targetShape[0]) // 2
-    y_start = (H - targetShape[1]) // 2
-    x_end = x_start + targetShape[0]
-    y_end = y_start + targetShape[1]
-    croppedData = normalizedData[:, :, x_start:x_end, y_start:y_end]

@@ -57,7 +57,9 @@ class LipMovementClassifier:
         self.testFeatures = np.concatenate((fakeTestFeatures, realTestFeatures), axis=0)
         self.testLabels = np.concatenate((fakeTestLabels, realTestLabels), axis=0)
 
-        torch.manual_seed(21)
+        #torch.manual_seed(21)
+        torch.manual_seed(42)
+        torch.cuda.manual_seed(42)
         self.trainloader = torch.utils.data.DataLoader(list(zip(self.trainFeatures, self.trainLabels)), batch_size=self.batch_size, shuffle=True)
         self.testloader = torch.utils.data.DataLoader(list(zip(self.testFeatures, self.testLabels)), batch_size=self.batch_size)
 
@@ -85,7 +87,6 @@ class LipMovementClassifier:
                 all_preds.extend(outputs.detach().cpu().numpy())
                 all_labels.extend(labels.detach().cpu().numpy())
                 
-            endTime = time.time()
 
             epochAccuracy = self.calculateAccuracy(all_preds, all_labels)
             epochAUC = self.calculateAUC(all_preds, all_labels)
@@ -95,6 +96,8 @@ class LipMovementClassifier:
             self.report.write('accuracy: %.3f' % (epochAccuracy)+"\n")
             print('AUC: %.3f' % (epochAUC))
             self.report.write('AUC: %.3f' % (epochAUC)+"\n")
+
+        endTime = time.time()
 
         #calculate time taken
         timeTaken = endTime - startTime
