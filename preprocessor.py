@@ -13,17 +13,17 @@ FAKEDATASETDIR_f2f = DATADIR + "/face2face"
 FAKEDATASETDIR_fs = DATADIR + "/faceswap"
 FAKEDATASETDIR_nt = DATADIR + "/neuraltextures"
 
-REALDATASETVIDEOS = os.listdir(REALDATASETDIR)
-FAKEDATASETVIDEOS_df = os.listdir(FAKEDATASETDIR_df)
-FAKEDATASETVIDEOS_f2f = os.listdir(FAKEDATASETDIR_f2f)
-FAKEDATASETVIDEOS_fs = os.listdir(FAKEDATASETDIR_fs)
-FAKEDATASETVIDEOS_nt = os.listdir(FAKEDATASETDIR_nt)
+REALDATASETVIDEOS = [] 
+FAKEDATASETVIDEOS_df = [] 
+FAKEDATASETVIDEOS_f2f = []
+FAKEDATASETVIDEOS_fs = [] 
+FAKEDATASETVIDEOS_nt = []
 
-REALDATASETVIDEOS = [REALDATASETDIR + "/" + video for video in REALDATASETVIDEOS]
-FAKEDATASETVIDEOS_df = [FAKEDATASETDIR_df + "/" + video for video in FAKEDATASETVIDEOS_df]
-FAKEDATASETVIDEOS_f2f = [FAKEDATASETDIR_f2f + "/" + video for video in FAKEDATASETVIDEOS_f2f]
-FAKEDATASETVIDEOS_fs = [FAKEDATASETDIR_fs + "/" + video for video in FAKEDATASETVIDEOS_fs]
-FAKEDATASETVIDEOS_nt = [FAKEDATASETDIR_nt + "/" + video for video in FAKEDATASETVIDEOS_nt]
+REALDATASETVIDEOS = [] 
+FAKEDATASETVIDEOS_df = [] 
+FAKEDATASETVIDEOS_f2f = []
+FAKEDATASETVIDEOS_fs = [] 
+FAKEDATASETVIDEOS_nt = []
 
 MOUTHSTARTINDEX = 48
 MOUTHENDINDEX = 68
@@ -43,6 +43,19 @@ class Preprocessor:
             else:
                 self.faceDetector = None #TODO
                 self.faceLandmarksPredictor = None
+            
+            REALDATASETVIDEOS = os.listdir(REALDATASETDIR)
+            FAKEDATASETVIDEOS_df = os.listdir(FAKEDATASETDIR_df)
+            FAKEDATASETVIDEOS_f2f = os.listdir(FAKEDATASETDIR_f2f)
+            FAKEDATASETVIDEOS_fs = os.listdir(FAKEDATASETDIR_fs)
+            FAKEDATASETVIDEOS_nt = os.listdir(FAKEDATASETDIR_nt)
+
+            REALDATASETVIDEOS = [REALDATASETDIR + "/" + video for video in REALDATASETVIDEOS]
+            FAKEDATASETVIDEOS_df = [FAKEDATASETDIR_df + "/" + video for video in FAKEDATASETVIDEOS_df]
+            FAKEDATASETVIDEOS_f2f = [FAKEDATASETDIR_f2f + "/" + video for video in FAKEDATASETVIDEOS_f2f]
+            FAKEDATASETVIDEOS_fs = [FAKEDATASETDIR_fs + "/" + video for video in FAKEDATASETVIDEOS_fs]
+            FAKEDATASETVIDEOS_nt = [FAKEDATASETDIR_nt + "/" + video for video in FAKEDATASETVIDEOS_nt]
+
     
 
 
