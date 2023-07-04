@@ -1,4 +1,7 @@
-"""Implementation of ResNet+MS-TCN"""
+'''
+The following model is adapted from the following repository: https://github.com/mpc001/Lipreading_using_Temporal_Convolutional_Networks
+'''
+
 import torch
 import torch.nn as nn
 import math

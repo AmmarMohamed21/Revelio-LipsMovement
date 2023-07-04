@@ -10,55 +10,86 @@ from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.metrics import roc_auc_score
 
 class LipMovementClassifier:
-    def __init__(self, fake_features_path, learning_rate=2e-4, batch_size=32, epochs=10):
-        self.OutputDir = "trainedclassifiers/model"+str(len(os.listdir("trainedclassifiers"))+1)
-        os.makedirs(self.OutputDir)
+    def __init__(self, isPredictor=False, mstcnModelPath='pretrainedModels/mstcn.pth', mstcnConfigFilePath='models/configs/mstcn.json', featureExtractorModelPath=None, fake_features_path=None, learning_rate=2e-4, batch_size=32, epochs=10):
+        assert mstcnModelPath is not None
+        assert mstcnConfigFilePath is not None
+        self.configFile = mstcnConfigFilePath
+        self.mstcnModelPath = mstcnModelPath
+        self.MSTCNModel = load_mstcn_model(self.mstcnModelPath,configfile=self.configFile)
 
-        self.report = open(self.OutputDir+"/report.txt", "w")
+        if isPredictor:
+            assert featureExtractorModelPath is not None
+            self.featureExtractor = load_resnet_feature_extractor(featureExtractorModelPath)
+            self.featureExtractor.eval()
+            self.MSTCNModel.eval()
 
-        self.pretrainedModelPath = 'pretrainedModels/mstcn.pth'
-        self.configFile = 'models/configs/mstcn.json'
-        self.report.write("Pretrained Model Path: "+self.pretrainedModelPath+"\n")
-        self.report.write("Config File: "+self.configFile+"\n")
 
-        self.MSTCNModel = load_mstcn_model(self.pretrainedModelPath,configfile=self.configFile)
+        else:
+            assert fake_features_path is not None
+            self.OutputDir = "trainedclassifiers/model"+str(len(os.listdir("trainedclassifiers"))+1)
+            os.makedirs(self.OutputDir)
 
-        self.learning_rate = learning_rate
-        self.batch_size = batch_size
-        self.epochs = epochs
+            self.report = open(self.OutputDir+"/report.txt", "w")
 
-        self.FakeFeaturesPath = fake_features_path
-        self.RealFeaturesPath = 'featuresExtracted/realfeatures.npz'
+            self.report.write("Pretrained Model Path: "+self.mstcnModelPath+"\n")
+            self.report.write("Config File: "+self.configFile+"\n")
 
-        self.report.write("Learning Rate: "+str(self.learning_rate)+"\n")
-        self.report.write("Batch Size: "+str(self.batch_size)+"\n")
-        self.report.write("Fake Features Path: "+self.FakeFeaturesPath+"\n")
-        self.report.write("Real Features Path: "+self.RealFeaturesPath+"\n")
+            self.MSTCNModel = load_mstcn_model(self.pretrainedModelPath,configfile=self.configFile)
+
+            self.learning_rate = learning_rate
+            self.batch_size = batch_size
+            self.epochs = epochs
+
+            self.FakeFeaturesPath = fake_features_path
+            self.RealFeaturesPath = 'featuresExtracted/realfeatures.npz'
+
+            self.report.write("Learning Rate: "+str(self.learning_rate)+"\n")
+            self.report.write("Batch Size: "+str(self.batch_size)+"\n")
+            self.report.write("Fake Features Path: "+self.FakeFeaturesPath+"\n")
+            self.report.write("Real Features Path: "+self.RealFeaturesPath+"\n")
+            
+            fakeFeatures = np.load(self.FakeFeaturesPath)['features']
+            realFeatures = np.load(self.RealFeaturesPath)['features']
+
+            #Split last 2400 frames (last 140 videos) as test set
+            fakeTestFeatures = fakeFeatures[-1680:]
+            realTestFeatures = realFeatures[-1680:]
+            fakeTrainFeatures = fakeFeatures[:-1680]
+            realTrainFeatures = realFeatures[:-1680]
+
+            #Labels
+            fakeTestLabels = np.zeros((fakeTestFeatures.shape[0],1))
+            realTestLabels = np.ones((realTestFeatures.shape[0],1))
+
+            fakeTrainLabels = np.zeros((fakeTrainFeatures.shape[0],1))
+            realTrainLabels = np.ones((realTrainFeatures.shape[0],1))
+
+            #Concatenate datasets
+            self.trainFeatures = np.concatenate((fakeTrainFeatures, realTrainFeatures), axis=0)
+            self.trainLabels = np.concatenate((fakeTrainLabels, realTrainLabels), axis=0)
+            self.testFeatures = np.concatenate((fakeTestFeatures, realTestFeatures), axis=0)
+            self.testLabels = np.concatenate((fakeTestLabels, realTestLabels), axis=0)
+
+            self.trainloader = torch.utils.data.DataLoader(list(zip(self.trainFeatures, self.trainLabels)), batch_size=self.batch_size, shuffle=True)
+            self.testloader = torch.utils.data.DataLoader(list(zip(self.testFeatures, self.testLabels)), batch_size=self.batch_size)
+    
+    def predict(self, inputGrayFrames, inputLandmarks):
+        croppedMouths = np.array([Preprocessor().cropMouthFromImage(inputGrayFrames[i], inputLandmarks[i]) for i in range(len(inputGrayFrames))])
+        croppedMouths = cropAndNormalizeFrames(croppedMouths)
         
-        fakeFeatures = np.load(self.FakeFeaturesPath)['features']
-        realFeatures = np.load(self.RealFeaturesPath)['features']
+        #split into sequences each of size 25 (L,W,H) to (L/25,25,W,H)
+        croppedMouths = np.array([croppedMouths[i:i+25] for i in range(0, len(croppedMouths), 25)])
 
-        #Split last 2400 frames (last 140 videos) as test set
-        fakeTestFeatures = fakeFeatures[-1680:]
-        realTestFeatures = realFeatures[-1680:]
-        fakeTrainFeatures = fakeFeatures[:-1680]
-        realTrainFeatures = realFeatures[:-1680]
+        #extract features
+        features = ExtractFeatures(self.featureExtractor, croppedMouths)
 
-        #Labels
-        fakeTestLabels = np.zeros((fakeTestFeatures.shape[0],1))
-        realTestLabels = np.ones((realTestFeatures.shape[0],1))
+        #convert to tensor
+        features = torch.from_numpy(features).cuda().float()
 
-        fakeTrainLabels = np.zeros((fakeTrainFeatures.shape[0],1))
-        realTrainLabels = np.ones((realTrainFeatures.shape[0],1))
+        #predict
+        outputs = self.MSTCNModel(features, lengths=[features.shape[1] for i in range(features.shape[0])])
 
-        #Concatenate datasets
-        self.trainFeatures = np.concatenate((fakeTrainFeatures, realTrainFeatures), axis=0)
-        self.trainLabels = np.concatenate((fakeTrainLabels, realTrainLabels), axis=0)
-        self.testFeatures = np.concatenate((fakeTestFeatures, realTestFeatures), axis=0)
-        self.testLabels = np.concatenate((fakeTestLabels, realTestLabels), axis=0)
-
-        self.trainloader = torch.utils.data.DataLoader(list(zip(self.trainFeatures, self.trainLabels)), batch_size=self.batch_size, shuffle=True)
-        self.testloader = torch.utils.data.DataLoader(list(zip(self.testFeatures, self.testLabels)), batch_size=self.batch_size)
+        return outputs.detach().cpu().numpy()
 
     def train(self):
         optimizer = torch.optim.Adam(self.MSTCNModel.parameters(), lr=self.learning_rate)

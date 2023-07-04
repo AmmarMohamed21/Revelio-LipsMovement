@@ -79,8 +79,15 @@ class Preprocessor:
         #get mouth landmarks
         mouth_landmarks, face = self.getMouthLandmarks(gray, cachedFace, useCachedFace)
 
+        #crop mouth region
+        mouth = self.cropMouthFromImage(img, mouth_landmarks, face)
+
+        #resize mouth shape        
+        return mouth, face
+    
+    def cropMouthFromImage(self, img, landmarks, targetShape=(96,96)):
         #Get bounding box of mouth region
-        (x, y, w, h) = cv2.boundingRect(np.array(mouth_landmarks))
+        (x, y, w, h) = cv2.boundingRect(np.array(landmarks))
 
         #middle point of mouth region
         (x, y) = (int((x + x + w) / 2), int((y + y + h) / 2))
@@ -93,12 +100,13 @@ class Preprocessor:
         y = y - h // 2
 
         #Crop the mouth region
-        mouth = gray[y:y+h, x:x+w]
+        mouth = img[y:y+h, x:x+w]
 
         #resize mouth shape
-        mouth = cv2.resize(mouth, self.targetShape)
+        mouth = cv2.resize(mouth, targetShape)
         
-        return mouth, face
+        return mouth
+
 
 
     def getMouthLandmarks(self, gray, cachedFace = None, useCachedFace=False):
