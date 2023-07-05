@@ -10,22 +10,25 @@ from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.metrics import roc_auc_score
 
 class LipMovementClassifier:
-    def __init__(self, isPredictor=False, mstcnModelPath='pretrainedModels/mstcn.pth', mstcnConfigFilePath='models/configs/mstcn.json', featureExtractorModelPath=None, fake_features_path=None, learning_rate=2e-4, batch_size=32, epochs=10):
-        assert mstcnModelPath is not None
+    def __init__(self, isPredictor=False, predictionMSTCNModelPaths = [], pretrainedMSTCNModelPath='pretrainedModels/mstcn.pth', mstcnConfigFilePath='models/configs/mstcn.json', featureExtractorModelPath=None, fake_features_path=None, learning_rate=2e-4, batch_size=32, epochs=10):
         assert mstcnConfigFilePath is not None
         self.configFile = mstcnConfigFilePath
-        self.mstcnModelPath = mstcnModelPath
-        self.MSTCNModel = load_mstcn_model(self.mstcnModelPath,configfile=self.configFile)
 
         if isPredictor:
             assert featureExtractorModelPath is not None
+            assert len(predictionMSTCNModelPaths) > 0
+            self.predictionMSTCNModels = []
+            for modelPath in predictionMSTCNModelPaths:
+                self.predictionMSTCNModels.append(load_mstcn_model(modelPath,configfile=self.configFile))
             self.featureExtractor = load_resnet_feature_extractor(featureExtractorModelPath)
             self.featureExtractor.eval()
-            self.MSTCNModel.eval()
 
 
         else:
+            assert pretrainedMSTCNModelPath is not None
             assert fake_features_path is not None
+            self.pretrainedMSTCNModelPath = pretrainedMSTCNModelPath
+            self.MSTCNModel = load_mstcn_model(self.pretrainedMSTCNModelPath,configfile=self.configFile)
             self.OutputDir = "trainedclassifiers/model"+str(len(os.listdir("trainedclassifiers"))+1)
             os.makedirs(self.OutputDir)
 
@@ -87,10 +90,13 @@ class LipMovementClassifier:
         features = torch.from_numpy(features).cuda().float()
 
         #predict
-        outputs = self.MSTCNModel(features, lengths=[features.shape[1] for i in range(features.shape[0])])
+        all_predictions = []
+        for model in self.predictionMSTCNModels:
+            predictions = model(features, lengths=[features.shape[1] for i in range(features.shape[0])])
+            all_predictions.append(predictions.detach().cpu().numpy())
 
-        return outputs.detach().cpu().numpy()
-
+        return all_predictions
+    
     def train(self):
         optimizer = torch.optim.Adam(self.MSTCNModel.parameters(), lr=self.learning_rate)
         criterion = nn.BCELoss()
