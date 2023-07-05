@@ -41,7 +41,6 @@ def ExtractFeaturesFromMouthFramesDataset(dataPath, targetPath, resnetModelPath 
     np.savez_compressed(targetPath, features=features)
 
 def ExtractFeatures(featureExtractor, data):
-
     features = np.array([featureExtractor(torch.FloatTensor(data[i][None, None, :, :, :]).cuda(), lengths=None).cpu().detach().numpy() for i in range(data.shape[0])])
     features=features.reshape(features.shape[0], features.shape[2], features.shape[3])
     return features

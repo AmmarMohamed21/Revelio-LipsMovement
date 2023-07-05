@@ -1,10 +1,10 @@
 import numpy as np
 import os
-from preprocessor import *
+from lipspreprocessor import *
 import torch
 from models.mstcn import *
 from models.resnet_feature_extractor import *
-from FeatureExtractor import *
+from extract_features import *
 import time
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.metrics import roc_auc_score
@@ -77,12 +77,11 @@ class LipMovementClassifier:
             self.testloader = torch.utils.data.DataLoader(list(zip(self.testFeatures, self.testLabels)), batch_size=self.batch_size)
     
     def predict(self, inputGrayFrames, inputLandmarks):
-        croppedMouths = np.array([Preprocessor().cropMouthFromImage(inputGrayFrames[i], inputLandmarks[i]) for i in range(len(inputGrayFrames))])
+        croppedMouths = np.array([Preprocessor().cropMouthFromImage(inputGrayFrames[i], inputLandmarks[i][MOUTHSTARTINDEX:MOUTHENDINDEX]) for i in range(len(inputGrayFrames))])
         croppedMouths = cropAndNormalizeFrames(croppedMouths)
         
         #split into sequences each of size 25 (L,W,H) to (L/25,25,W,H)
-        croppedMouths = np.array([croppedMouths[i:i+25] for i in range(0, len(croppedMouths), 25)])
-
+        croppedMouths = np.array([croppedMouths[i:i+25] for i in range(0, (len(croppedMouths)//25)*25, 25)])
         #extract features
         features = ExtractFeatures(self.featureExtractor, croppedMouths)
 
