@@ -103,8 +103,10 @@ class Preprocessor:
         mouth = img[y:y+h, x:x+w]
 
         #resize mouth shape
-        mouth = cv2.resize(mouth, targetShape)
-        
+        try:
+            mouth = cv2.resize(mouth, targetShape)
+        except: # if something wrong with mouth detection
+            mouth = cv2.resize(img, targetShape)
         return mouth
 
 
