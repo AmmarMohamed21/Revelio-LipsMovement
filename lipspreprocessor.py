@@ -31,6 +31,10 @@ MOUTHENDINDEX = 68
 LandmarksPredictorPath = "landmarkPredictor/shape_predictor_68_face_landmarks.dat"
 
 class Preprocessor:
+    '''
+    A class that is used to preprocess the dataset to prepare it for training
+    Since the dataset is large we preferred to preprocess it and save it to disk
+    '''
     def __init__(self, dataset=None, datasetType=None, targetShape=(96,96), targetPath="mouthsDataset", useDlib = True, isCropping=False):
         if isCropping:
             self.dataset = dataset
@@ -41,7 +45,7 @@ class Preprocessor:
                 self.faceDetector = dlib.get_frontal_face_detector()
                 self.faceLandmarksPredictor = dlib.shape_predictor(LandmarksPredictorPath)
             else:
-                self.faceDetector = None #TODO
+                self.faceDetector = None 
                 self.faceLandmarksPredictor = None
             
             REALDATASETVIDEOS = os.listdir(REALDATASETDIR)
@@ -61,6 +65,13 @@ class Preprocessor:
 
     #read video frames
     def readVideoFrames(self, path):
+        '''
+        Read video frames from a video file
+
+        path: path to the video file
+
+        return: list of frames
+        '''
         cap = cv2.VideoCapture(path)
         frames = []
         while True:
@@ -73,7 +84,17 @@ class Preprocessor:
         return frames
     
     def detectMouthLandmarksFromImage(self, img, cachedFace = None, useCachedFace=False):
-        #Detect facial landmarks using dlib
+        '''
+        Detect mouth landmarks from an image
+
+        img: image to detect mouth landmarks from
+        cachedFace: cached face to use instead of detecting a new one
+        useCachedFace: whether to use the cached face or not
+
+        return: mouth landmarks, face bounding box for caching
+        '''
+
+        #convert image to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         #get mouth landmarks
@@ -86,6 +107,16 @@ class Preprocessor:
         return mouth, face
     
     def cropMouthFromImage(self, img, landmarks, targetShape=(96,96)):
+        '''
+        Crop mouth region from an image
+
+        img: image to crop mouth region from
+        landmarks: mouth landmarks only of size (20, 2)
+        targetShape: shape of the cropped mouth region
+
+        return: cropped mouth region
+        '''
+
         #Get bounding box of mouth region
         (x, y, w, h) = cv2.boundingRect(np.array(landmarks))
 
@@ -112,7 +143,17 @@ class Preprocessor:
 
 
     def getMouthLandmarks(self, gray, cachedFace = None, useCachedFace=False):
-        
+        '''
+        Get mouth landmarks from a grayscale image
+
+        gray: grayscale image to detect mouth landmarks from
+        cachedFace: cached face to use instead of detecting a new one
+        useCachedFace: whether to use the cached face or not
+
+        return: mouth landmarks, face bounding box for caching
+        '''
+                
+
         # # Detect faces in the grayscale image
         detectedFaces = None if useCachedFace else self.faceDetector(gray)
         if detectedFaces is None or len(detectedFaces) == 0:
@@ -136,6 +177,11 @@ class Preprocessor:
         return mouth_landmarks, face
 
     def processVideo(self, video):
+        '''
+        Process a video file while doing face detection once each 5 frames
+
+        video: path to the video file
+        '''
         cachedFace = None
         useCachedFace = False
 
@@ -174,6 +220,13 @@ class Preprocessor:
 
 
     def framesToSequences(self, args):
+        '''
+        Convert frames to sequences of 25 frames
+
+        args: arguments to the function which are (folder_path, vid, max_frames, sequence_length)
+
+        return: sequences of 25 frames
+        '''
         folder_path, vid, max_frames, sequence_length = args
         print(vid)
         vid_frames = os.listdir(os.path.join(folder_path, vid))
@@ -192,6 +245,9 @@ class Preprocessor:
     
 
     def saveDatasetAsNp(self, datasetPath, outputName, sequenceLength=25, maxFrames=300):
+        '''
+        Save the dataset as a numpy array
+        '''
         dataset = []
 
         with ThreadPoolExecutor(max_workers=12) as executor:

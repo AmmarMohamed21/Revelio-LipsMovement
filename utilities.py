@@ -1,6 +1,13 @@
 import numpy as np
 
 def getMeanAndStd(realData, deepfakesData, face2faceData, faceswapData, neuraltexturesData):  
+    '''
+    A Function that is used to calculate the mean and standard deviation of the full FF++ dataset
+    The huge size of dataset makes it impossible to calculate the mean and standard deviation in one go
+    So, we split the dataset into chunks of 1000 images and calculate the mean and standard deviation of each chunk
+    Then, we calculate the mean and standard deviation of the means and standard deviations of each chunk
+    '''
+    
     realmean = realData.mean()
     realSize = realData.shape[0]
 

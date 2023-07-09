@@ -10,7 +10,25 @@ from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.metrics import roc_auc_score
 
 class LipMovementClassifier:
+    '''
+    A class that is used to train and test a classifier for lip movement and also to predict the lip movement of a video
+    '''
     def __init__(self, isPredictor=False, predictionMSTCNModelPaths = [], pretrainedMSTCNModelPath='pretrainedModels/mstcn.pth', mstcnConfigFilePath='models/configs/mstcn.json', featureExtractorModelPath=None, fake_features_path=None, learning_rate=2e-4, batch_size=32, epochs=10):
+        '''
+        Constructor for the LipMovementClassifier class
+        Parameters:
+            isPredictor: A boolean that is used to indicate whether the classifier is used for prediction or training
+            predictionMSTCNModelPath: A list of paths to the trained MSTCN models that are used for prediction
+
+            pretrainedMSTCNModelPath: A path to the pretrained MSTCN model that is used for fine tuning
+            mstcnConfigFilePath: A path to the config file of the MSTCN model
+            featureExtractorModelPath: A path to the pretrained ResNet feature extractor model
+            fake_features_path: A path to the fake features that are used for training
+            learning_rate: The learning rate of the classifier
+            batch_size: The batch size of the classifier
+            epochs: The number of epochs of the classifier
+        '''
+
         assert mstcnConfigFilePath is not None
         self.configFile = mstcnConfigFilePath
 
@@ -77,6 +95,16 @@ class LipMovementClassifier:
             self.testloader = torch.utils.data.DataLoader(list(zip(self.testFeatures, self.testLabels)), batch_size=self.batch_size)
     
     def predict(self, inputGrayFrames, inputLandmarks):
+        '''
+        A function that is used to predict the lip movement of a video
+        Parameters:
+            inputGrayFrames: A list of grayscale frames of the video
+            inputLandmarks: A list of landmarks of the video
+        
+        Returns:
+            A list of of list predictions for each frame of the video of size 4,  each list contains the predictions of the 4 MSTCN models
+        '''
+
         croppedMouths = np.array([Preprocessor().cropMouthFromImage(inputGrayFrames[i], inputLandmarks[i][MOUTHSTARTINDEX:MOUTHENDINDEX]) for i in range(len(inputGrayFrames))])
         croppedMouths = cropAndNormalizeFrames(croppedMouths)
         
@@ -97,6 +125,9 @@ class LipMovementClassifier:
         return all_predictions
     
     def train(self):
+        '''
+        A function that is used to train the classifier
+        '''
         optimizer = torch.optim.Adam(self.MSTCNModel.parameters(), lr=self.learning_rate)
         criterion = nn.BCELoss()
 
@@ -138,6 +169,11 @@ class LipMovementClassifier:
         self.report.write('Time of Training: %.3f' % (timeTaken)+"\n")
     
     def test(self):
+        '''
+        A function that is used to test the classifier on the test set and produce the results
+        Results are produced in the report file contains both video level and sequence level
+        '''
+
         self.MSTCNModel.eval()
 
         #Calculate accuracy on test set
@@ -191,16 +227,37 @@ class LipMovementClassifier:
         self.report.close()
             
     def calculateAccuracy(self,preds,labels):
+        '''
+        A function that is used to calculate the accuracy of the classifier
+
+        Parameters:
+        preds: the predictions of the classifier
+        labels: the labels of the data
+        '''
         preds = np.array(preds).round().flatten()
         labels = np.array(labels).flatten()
         return (preds == labels).mean()
     
     def calculateAUC(self, preds,labels):
+        '''
+        A function that is used to calculate the AUC of the classifier
+
+        Parameters:
+        preds: the predictions of the classifier
+        labels: the labels of the data
+        '''
         preds = np.array(preds).flatten()
         labels = np.array(labels).flatten()
         return roc_auc_score(labels,preds)
     
     def calculateAccuracyByVideos(self, preds,labels):
+        '''
+        A function that is used to calculate the accuracy of the classifier on video level
+
+        Parameters:
+        preds: the predictions of the classifier
+        labels: the labels of the data
+        '''
         preds = np.array(preds).round().flatten()
         labels = np.array(labels).flatten()
         preds = preds.reshape(-1,12)
@@ -210,6 +267,13 @@ class LipMovementClassifier:
         return (preds == labels).mean()
     
     def calculateAUCByVideos(self,preds,labels):
+        '''
+        A function that is used to calculate the AUC of the classifier on video level
+
+        Parameters:
+        preds: the predictions of the classifier
+        labels: the labels of the data
+        '''
         preds = np.array(preds).flatten()
         labels = np.array(labels).flatten()
         preds = preds.reshape(-1,12)
@@ -219,6 +283,14 @@ class LipMovementClassifier:
         return roc_auc_score(labels,preds)
     
     def calculateCMAndReportByVideo(self, preds,labels):
+        '''
+        A function that is used to calculate the confusion matrix and classification report of the classifier on video level
+
+        Parameters:
+        preds: the predictions of the classifier
+        labels: the labels of the data
+        '''
+
         preds = np.array(preds).round().flatten()
         labels = np.array(labels).flatten()
         preds = preds.reshape(-1,12)
@@ -230,6 +302,13 @@ class LipMovementClassifier:
         return cm,report
     
     def calculateCMAndReport(self, preds,labels):
+        '''
+        A function that is used to calculate the confusion matrix and classification report of the classifier
+        
+        Parameters:
+        preds: the predictions of the classifier
+        labels: the labels of the data
+        '''
         preds = np.array(preds).round().flatten()
         labels = np.array(labels).flatten()
         return confusion_matrix(labels,preds), classification_report(labels,preds)
